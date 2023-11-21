@@ -2,6 +2,7 @@
 #ifndef KEYVALUEPARSER_H
 #define KEYVALUEPARSER_H
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -29,7 +30,8 @@ class KeyValueParser {
                 !std::getline(iss, value)) {
                 continue; // Skip malformed lines
             }
-
+            trim(key);
+            trim(value);
             m_data[key] = value;
         }
 
@@ -43,6 +45,17 @@ class KeyValueParser {
     std::string m_filename;
     char m_delimiter;
     std::map<std::string, std::string> m_data;
+
+    void trim(std::string &s) {
+        s.erase(s.begin(),
+                std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+                    return !std::isspace(ch);
+                }));
+        s.erase(std::find_if(s.rbegin(), s.rend(),
+                             [](unsigned char ch) { return !std::isspace(ch); })
+                    .base(),
+                s.end());
+    }
 };
 
 #endif // KEYVALUEPARSER_H
