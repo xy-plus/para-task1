@@ -1,8 +1,11 @@
+#include "reader.h"
+#include <iostream>
 #include <mpi.h>
-#include <nlohmann/json.hpp>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+using namespace std;
 
 // 初始化数据为 0, 1, 2, ...
 void init_data(int *buf, int data_size, int seed) {
@@ -22,43 +25,39 @@ int check_data(int *buf, int data_size, int seed) {
 }
 
 int main(int argc, char *argv[]) {
+    KeyValueParser parser(argv[1]);
+    parser.parse();
+    // for (const auto &kv : parser.data()) {
+    //     std::cout << kv.first << " => " << kv.second << std::endl;
+    // }
+    // exit(0);
     MPI_Init(&argc, &argv);
 
-    int MYID, NPROC, ROOTID;
+    int MYID, NPROC;
     MPI_Comm_rank(MPI_COMM_WORLD, &MYID);
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
-    // 暂时 ROOT ID 写死为 2
-    ROOTID = 2;
 
-    // 检查命令行参数
-    if (argc < 3) {
-        if (MYID == 0) {
-            fprintf(stderr, "Usage: %s <operation> <data_size>\n", argv[0]);
-        }
-        MPI_Finalize();
-        return 1;
-    }
-
-    char *operation = argv[1];
-    int data_size = atoi(argv[2]);
+    string operation = parser.data().at("operation");
+    int data_size = atoi(parser.data().at("data_size").c_str());
+    int ROOTID = atoi(parser.data().at("root_id").c_str());
 
     // 数据准备
-    int *sendbuf = NULL;
-    int *recvbuf = NULL;
+    int *sendbuf = nullptr;
+    int *recvbuf = nullptr;
 
     double start_time, end_time;
     // 记录开始时间
     start_time = MPI_Wtime();
 
     // 选择和执行集合通信操作
-    if (strcmp(operation, "bcast") == 0) {
+    if (operation == "bcast") {
         recvbuf = (int *)malloc(data_size * sizeof(int));
         // 只有 ROOT 进程初始化数据
         if (MYID == ROOTID) {
             init_data(recvbuf, data_size, MYID);
         }
         MPI_Bcast(recvbuf, data_size, MPI_INT, ROOTID, MPI_COMM_WORLD);
-    } else if (strcmp(operation, "gather") == 0) {
+    } else if (operation == "gather") {
         sendbuf = (int *)malloc(data_size * sizeof(int));
         // 只有 ROOT 进程接收数据，需要 NPROC 倍于发送数据的空间
         if (MYID == ROOTID) {
@@ -68,26 +67,27 @@ int main(int argc, char *argv[]) {
         MPI_Gather(sendbuf, data_size, MPI_INT, recvbuf, data_size, MPI_INT,
                    ROOTID, MPI_COMM_WORLD);
     } else {
-        printf("Unknown operation: %s\n", operation);
+        // printf("Unknown operation: %s\n", operation);
+        cout << "Unknown operation: " << operation << endl;
     }
     // 记录通信结束时间
     end_time = MPI_Wtime();
 
     // 检查数据正确性并输出带宽
-    if (strcmp(operation, "bcast") == 0) {
+    if (operation == "bcast") {
         // 每个进程单独检查接受到的数据是否正确
-        if (check_data(recvbuf, data_size, MYID) == 1) {
-            printf("Process %d: data check passed.\n", MYID);
+        if (check_data(recvbuf, data_size, ROOTID) == 1) {
+            cout << "Process " << MYID << ": data check passed." << endl;
         } else {
-            printf("Process %d: data check failed.\n", MYID);
+            cout << "Process " << MYID << ": data check failed." << endl;
         }
         if (MYID == ROOTID) {
             double bandwidth = (double)data_size * NPROC * sizeof(int) /
                                (end_time - start_time) / 1e6;
-            printf("Operation: %s, Data Size: %d, Bandwidth: %f MB/s\n",
-                   operation, data_size, bandwidth);
+            cout << "Operation: " << operation << ", Data Size: " << data_size
+                 << ", Bandwidth: " << bandwidth << " MB/s" << endl;
         }
-    } else if (strcmp(operation, "gather") == 0) {
+    } else if (operation == "gather") {
         // 根节点检查接受到的数据是否正确
         if (MYID == ROOTID) {
             // 数据根据进程 ID 排列
@@ -97,21 +97,21 @@ int main(int argc, char *argv[]) {
                     exit(0);
                 }
             }
-            printf("Process %d: data check passed.\n", MYID);
+            cout << "Process " << MYID << ": data check passed." << endl;
             double bandwidth = (double)data_size * NPROC * sizeof(int) /
                                (end_time - start_time) / 1e6;
-            printf("Operation: %s, Data Size: %d, Bandwidth: %f MB/s\n",
-                   operation, data_size, bandwidth);
+            cout << "Operation: " << operation << ", Data Size: " << data_size
+                 << ", Bandwidth: " << bandwidth << " MB/s" << endl;
         }
     } else {
-        printf("Unknown operation: %s\n", operation);
+        cout << "Unknown operation: " << operation << endl;
     }
 
     // 清理资源
-    if (sendbuf != NULL) {
+    if (sendbuf != nullptr) {
         free(sendbuf);
     }
-    if (recvbuf != NULL) {
+    if (recvbuf != nullptr) {
         free(recvbuf);
     }
 
