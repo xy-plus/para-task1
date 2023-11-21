@@ -27,19 +27,22 @@ int check_data(int *buf, int data_size, int seed) {
 int main(int argc, char *argv[]) {
     KeyValueParser parser(argv[1]);
     parser.parse();
-    // for (const auto &kv : parser.data()) {
-    //     std::cout << kv.first << " => " << kv.second << std::endl;
-    // }
     // exit(0);
     MPI_Init(&argc, &argv);
 
     int MYID, NPROC;
+    int ROOTID = atoi(parser.data().at("root_id").c_str());
     MPI_Comm_rank(MPI_COMM_WORLD, &MYID);
     MPI_Comm_size(MPI_COMM_WORLD, &NPROC);
 
+    // 打印 config
+    if (MYID == ROOTID) {
+        for (const auto &kv : parser.data()) {
+            std::cout << kv.first << ": " << kv.second << std::endl;
+        }
+    }
     string operation = parser.data().at("operation");
     int data_size = atoi(parser.data().at("data_size").c_str());
-    int ROOTID = atoi(parser.data().at("root_id").c_str());
 
     // 数据准备
     int *sendbuf = nullptr;
