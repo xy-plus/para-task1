@@ -89,6 +89,23 @@ int main(int argc, char *argv[]) {
         }
         MPI_Reduce(sendbuf, recvbuf, data_size, MPI_INT, MPI_SUM, ROOTID,
                    MPI_COMM_WORLD);
+    } else if (operation == "all_reduce_sum") {
+        sendbuf = (int *)malloc(data_size * sizeof(int));
+        recvbuf = (int *)malloc(data_size * sizeof(int));
+        if (MYID == ROOTID) {
+            // 根节点的数据 send data 为 MYID, MYID + 1, MYID + 2, ...
+            init_data(sendbuf, data_size, MYID);
+            for (int i = 0; i < data_size; i++) {
+                sendbuf[i] += MYID;
+            }
+        } else {
+            // 非根节点的数据 send data 为 MYID, MYID, MYID, ...
+            for (int i = 0; i < data_size; i++) {
+                sendbuf[i] = MYID;
+            }
+        }
+        MPI_Allreduce(sendbuf, recvbuf, data_size, MPI_INT, MPI_SUM,
+                      MPI_COMM_WORLD);
     } else {
         // printf("Unknown operation: %s\n", operation);
         cout << "Unknown operation: " << operation << endl;
@@ -139,6 +156,23 @@ int main(int argc, char *argv[]) {
                 cout << "Process " << MYID << ": data check failed." << endl;
             }
             double bandwidth = (double)data_size * NPROC * sizeof(int) /
+                               (end_time - start_time) / 1e6;
+            cout << "Operation: " << operation << ", Data Size: " << data_size
+                 << ", Bandwidth: " << bandwidth << " MB/s" << endl;
+        }
+    } else if (operation == "all_reduce_sum") {
+        // 所有节点都检查接受到的数据是否正确
+        int sum = 0;
+        for (int i = 0; i < NPROC; i++) {
+            sum += i;
+        }
+        if (check_data(recvbuf, data_size, sum + ROOTID) == 1) {
+            cout << "Process " << MYID << ": data check passed." << endl;
+        } else {
+            cout << "Process " << MYID << ": data check failed." << endl;
+        }
+        if (MYID == ROOTID) {
+            double bandwidth = (double)data_size * NPROC * 2 * sizeof(int) /
                                (end_time - start_time) / 1e6;
             cout << "Operation: " << operation << ", Data Size: " << data_size
                  << ", Bandwidth: " << bandwidth << " MB/s" << endl;
