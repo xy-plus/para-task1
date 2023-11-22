@@ -78,9 +78,6 @@ int main(int argc, char *argv[]) {
         if (MYID == ROOTID) {
             // 根节点的数据 send data 为 MYID, MYID + 1, MYID + 2, ...
             init_data(sendbuf, data_size, MYID);
-            for (int i = 0; i < data_size; i++) {
-                sendbuf[i] += MYID;
-            }
         } else {
             // 非根节点的数据 send data 为 MYID, MYID, MYID, ...
             for (int i = 0; i < data_size; i++) {
@@ -95,9 +92,6 @@ int main(int argc, char *argv[]) {
         if (MYID == ROOTID) {
             // 根节点的数据 send data 为 MYID, MYID + 1, MYID + 2, ...
             init_data(sendbuf, data_size, MYID);
-            for (int i = 0; i < data_size; i++) {
-                sendbuf[i] += MYID;
-            }
         } else {
             // 非根节点的数据 send data 为 MYID, MYID, MYID, ...
             for (int i = 0; i < data_size; i++) {
@@ -150,7 +144,7 @@ int main(int argc, char *argv[]) {
             for (int i = 0; i < NPROC; i++) {
                 sum += i;
             }
-            if (check_data(recvbuf, data_size, sum + ROOTID) == 1) {
+            if (check_data(recvbuf, data_size, sum) == 1) {
                 cout << "Process " << MYID << ": data check passed." << endl;
             } else {
                 cout << "Process " << MYID << ": data check failed." << endl;
@@ -166,7 +160,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < NPROC; i++) {
             sum += i;
         }
-        if (check_data(recvbuf, data_size, sum + ROOTID) == 1) {
+        if (check_data(recvbuf, data_size, sum) == 1) {
             cout << "Process " << MYID << ": data check passed." << endl;
         } else {
             cout << "Process " << MYID << ": data check failed." << endl;
