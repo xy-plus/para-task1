@@ -14,10 +14,10 @@ void init_data(int *buf, int data_size, int seed) {
     }
 }
 
-// 检查数据是否正确，是否为 0, 1, 2, ...
-int check_data(int *buf, int data_size, int seed) {
+// 检查数据是否正确，是否为 plus, plus + mul, plus + 2 * mul, ...
+int check_data(int *buf, int data_size, int plus, int mul = 1) {
     for (int i = 0; i < data_size; i++) {
-        if (buf[i] != i + seed) {
+        if (buf[i] != i * mul + plus) {
             return 0;
         }
     }
@@ -100,6 +100,11 @@ int main(int argc, char *argv[]) {
         }
         MPI_Allreduce(sendbuf, recvbuf, data_size, MPI_INT, MPI_SUM,
                       MPI_COMM_WORLD);
+    } else if (operation == "scan_sum") {
+        sendbuf = (int *)malloc(data_size * sizeof(int));
+        recvbuf = (int *)malloc(data_size * sizeof(int));
+        init_data(sendbuf, data_size, MYID);
+        MPI_Scan(sendbuf, recvbuf, data_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     } else {
         // printf("Unknown operation: %s\n", operation);
         cout << "Unknown operation: " << operation << endl;
@@ -167,6 +172,23 @@ int main(int argc, char *argv[]) {
         }
         if (MYID == ROOTID) {
             double bandwidth = (double)data_size * NPROC * 2 * sizeof(int) /
+                               (end_time - start_time) / 1e6;
+            cout << "Operation: " << operation << ", Data Size: " << data_size
+                 << ", Bandwidth: " << bandwidth << " MB/s" << endl;
+        }
+    } else if (operation == "scan_sum") {
+        // 所有节点都检查接受到的数据是否正确
+        int sum = 0;
+        for (int i = 0; i <= MYID; i++) {
+            sum += i;
+        }
+        if (check_data(recvbuf, data_size, sum, MYID + 1) == 1) {
+            cout << "Process " << MYID << ": data check passed." << endl;
+        } else {
+            cout << "Process " << MYID << ": data check failed." << endl;
+        }
+        if (MYID == ROOTID) {
+            double bandwidth = (double)data_size * NPROC * sizeof(int) /
                                (end_time - start_time) / 1e6;
             cout << "Operation: " << operation << ", Data Size: " << data_size
                  << ", Bandwidth: " << bandwidth << " MB/s" << endl;
