@@ -1,7 +1,10 @@
 # 运行方式
 
 ```sh
-bash run.sh config/bcast.txt
+# example
+bash run.sh config/bcast.txt 10
+# config 目录下有所有作业要求的指令对应的配置文件
+# 10 是进程数
 ```
 
 # 运行结果
@@ -17,3 +20,5 @@ reduce_sum 2.7GB/s ，算好的数据只需要给 ROOT 进程。
 all_reduce_sum 2.7GB/s ，多了一步把算好的数据发回给所有进程。
 
 scan_sum 1GB/s ，存在串行，所以较慢。
+
+all_to_all 6GB/S 。

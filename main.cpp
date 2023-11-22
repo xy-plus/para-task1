@@ -105,6 +105,13 @@ int main(int argc, char *argv[]) {
         recvbuf = (int *)malloc(data_size * sizeof(int));
         init_data(sendbuf, data_size, MYID);
         MPI_Scan(sendbuf, recvbuf, data_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    } else if (operation == "all_to_all") {
+        sendbuf = (int *)malloc(data_size * NPROC * sizeof(int));
+        recvbuf = (int *)malloc(data_size * NPROC * sizeof(int));
+        // 每个进程的 sendbuf 都是 0, 1, 2, ... , data_size * NPROC - 1
+        init_data(sendbuf, data_size * NPROC, 0);
+        MPI_Alltoall(sendbuf, data_size, MPI_INT, recvbuf, data_size, MPI_INT,
+                     MPI_COMM_WORLD);
     } else {
         // printf("Unknown operation: %s\n", operation);
         cout << "Unknown operation: " << operation << endl;
@@ -189,6 +196,22 @@ int main(int argc, char *argv[]) {
         }
         if (MYID == ROOTID) {
             double bandwidth = (double)data_size * NPROC * sizeof(int) /
+                               (end_time - start_time) / 1e6;
+            cout << "Operation: " << operation << ", Data Size: " << data_size
+                 << ", Bandwidth: " << bandwidth << " MB/s" << endl;
+        }
+    } else if (operation == "all_to_all") {
+        // 所有节点都检查接受到的数据是否正确
+        for (int i = 0; i < NPROC; i++) {
+            if (check_data(recvbuf + i * data_size, data_size,
+                           MYID * data_size) == 0) {
+                printf("Process %d: data check failed.\n", MYID);
+                exit(0);
+            }
+        }
+        cout << "Process " << MYID << ": data check passed." << endl;
+        if (MYID == ROOTID) {
+            double bandwidth = (double)data_size * NPROC * NPROC * sizeof(int) /
                                (end_time - start_time) / 1e6;
             cout << "Operation: " << operation << ", Data Size: " << data_size
                  << ", Bandwidth: " << bandwidth << " MB/s" << endl;
