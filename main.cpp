@@ -7,10 +7,10 @@
 
 using namespace std;
 
-// 初始化数据为 0, 1, 2, ...
-void init_data(int *buf, int data_size, int seed) {
+// 初始化数据为 0 + plus, 1 + plus, 2 + plus, ...
+void init_data(int *buf, int data_size, int plus) {
     for (int i = 0; i < data_size; i++) {
-        buf[i] = i + seed;
+        buf[i] = i + plus;
     }
 }
 
@@ -27,7 +27,6 @@ int check_data(int *buf, int data_size, int plus, int mul = 1) {
 int main(int argc, char *argv[]) {
     KeyValueParser parser(argv[1]);
     parser.parse();
-    // exit(0);
     MPI_Init(&argc, &argv);
 
     int MYID, NPROC;
